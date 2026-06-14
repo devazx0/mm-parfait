@@ -8,6 +8,11 @@
   },
   "packageManager": "pnpm@10.29.1",
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "tailwindcss": "^4.3.0",
     "turbo": "^2.5.0"
+  },
+  "dependencies": {
+    "react-router-dom": "^7.17.0"
   }
 }
