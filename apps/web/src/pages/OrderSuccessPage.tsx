@@ -1,16 +1,35 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import type { OrderRecord } from '../services/orders'
+
+const CONFETTI_COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444']
+
+interface ConfettiPiece {
+  id: number
+  left: number
+  delay: number
+  duration: number
+  size: number
+  color: string
+  rotation: number
+  round: boolean
+}
+
+function createConfettiPieces(): ConfettiPiece[] {
+  return Array.from({ length: 40 }, (_, i) => ({
+    id: i,
+    left: (i * 37) % 100,
+    delay: ((i * 13) % 30) / 10,
+    duration: 2 + ((i * 7) % 30) / 10,
+    size: 5 + ((i * 11) % 8),
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    rotation: (i * 53) % 360,
+    round: i % 2 === 0,
+  }))
+}
 
 function Confetti() {
-  const pieces = Array.from({ length: 40 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: Math.random() * 3,
-    duration: 2 + Math.random() * 3,
-    size: 5 + Math.random() * 8,
-    color: ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'][Math.floor(Math.random() * 6)],
-    rotation: Math.random() * 360,
-  }))
+  const pieces = createConfettiPieces()
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
@@ -24,7 +43,7 @@ function Confetti() {
             width: `${p.size}px`,
             height: `${p.size}px`,
             backgroundColor: p.color,
-            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+            borderRadius: p.round ? '50%' : '2px',
             transform: `rotate(${p.rotation}deg)`,
             animationDelay: `${p.delay}s`,
             animationDuration: `${p.duration}s`,
@@ -35,18 +54,20 @@ function Confetti() {
   )
 }
 
-function loadOrder() {
+function loadOrder(): OrderRecord | null {
   try {
     const saved = sessionStorage.getItem('orderSuccess')
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return {}
+    if (saved) return JSON.parse(saved) as OrderRecord
+  } catch {
+    // Ignore malformed stored order data
+  }
+  return null
 }
 
 export default function OrderSuccessPage() {
   const navigate = useNavigate()
   const [showConfetti, setShowConfetti] = useState(true)
-  const { name, total, method, items } = loadOrder()
+  const order = loadOrder()
 
   useEffect(() => {
     sessionStorage.removeItem('orderSuccess')
@@ -57,19 +78,22 @@ export default function OrderSuccessPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  if (!name) {
+  if (!order) {
     return (
       <main className="px-container-margin-mobile pt-16 pb-[100px] flex flex-col items-center justify-center min-h-[70vh] text-center">
         <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-md">info</span>
         <p className="text-body-md font-body-md text-on-surface-variant">No order information found.</p>
-        <button onClick={() => navigate('/shop')} className="mt-lg bg-primary text-on-primary font-bold py-3 px-lg rounded text-label-md font-label-md">
+        <button onClick={() => navigate({ to: '/shop' })} className="mt-lg bg-primary text-on-primary font-bold py-3 px-lg rounded text-label-md font-label-md">
           Go to Shop
         </button>
       </main>
     )
   }
 
-  const orderNumber = `MMP-${String(Math.floor(100000 + Math.random() * 900000))}`
+  const deliveryLabel = order.deliveryMethod
+    ? order.deliveryMethod.charAt(0).toUpperCase() + order.deliveryMethod.slice(1)
+    : 'Delivery'
+  const itemCount = order.items?.reduce((sum, i) => sum + i.quantity, 0) ?? 0
 
   return (
     <main className="px-container-margin-mobile pt-16 pb-[100px]">
@@ -80,7 +104,7 @@ export default function OrderSuccessPage() {
           <span className="material-symbols-outlined text-[#2E7D32] text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
         </div>
         <h2 className="text-headline-lg-mobile font-headline-lg-mobile text-on-surface font-bold mb-xs">Order Confirmed!</h2>
-        <p className="text-body-md font-body-md text-on-surface-variant">Thank you, {name}!</p>
+        <p className="text-body-md font-body-md text-on-surface-variant">Thank you, {order.customerName}!</p>
       </section>
 
       <section className="bg-[#E8F5E9] border border-[#A5D6A7] rounded-lg p-md mb-lg flex items-center gap-md">
@@ -96,29 +120,29 @@ export default function OrderSuccessPage() {
         <div className="flex flex-col gap-sm">
           <div className="flex justify-between text-label-sm font-label-sm">
             <span className="text-on-surface-variant">Order Number</span>
-            <span className="text-on-surface font-bold">{orderNumber}</span>
+            <span className="text-on-surface font-bold">{order.orderNumber}</span>
           </div>
           <div className="flex justify-between text-label-sm font-label-sm">
             <span className="text-on-surface-variant">Items</span>
-            <span className="text-on-surface">{items} item{items !== 1 ? 's' : ''}</span>
+            <span className="text-on-surface">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
           </div>
           <div className="flex justify-between text-label-sm font-label-sm">
             <span className="text-on-surface-variant">Delivery Method</span>
-            <span className="text-on-surface">{method}</span>
+            <span className="text-on-surface">{deliveryLabel}</span>
           </div>
           <div className="border-t border-outline-variant my-sm" />
           <div className="flex justify-between text-body-md font-body-md font-bold">
             <span className="text-on-surface">Total Paid</span>
-            <span className="text-primary">₦{total.toLocaleString()}</span>
+            <span className="text-primary">{order.total}</span>
           </div>
         </div>
       </section>
 
       <div className="flex flex-col gap-sm">
-        <button onClick={() => navigate('/shop')} className="w-full bg-primary text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate({ to: '/shop' })} className="w-full bg-primary text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity">
           Continue Shopping
         </button>
-        <button onClick={() => navigate('/')} className="w-full bg-surface text-on-surface border-2 border-on-tertiary-fixed font-bold py-3 rounded text-label-md font-label-md hover:bg-surface-container transition-colors">
+        <button onClick={() => navigate({ to: '/' })} className="w-full bg-surface text-on-surface border-2 border-on-tertiary-fixed font-bold py-3 rounded text-label-md font-label-md hover:bg-surface-container transition-colors">
           Back to Home
         </button>
       </div>

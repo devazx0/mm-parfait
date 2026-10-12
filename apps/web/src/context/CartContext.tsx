@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
 export interface CartItem {
-  id: number
+  id: string
   name: string
   price: string
   priceNum: number
@@ -13,8 +13,8 @@ export interface CartItem {
 interface CartContextType {
   items: CartItem[]
   addToCart: (item: Omit<CartItem, 'quantity'>) => void
-  removeFromCart: (id: number) => void
-  updateQuantity: (id: number, qty: number) => void
+  removeFromCart: (id: string) => void
+  updateQuantity: (id: string, qty: number) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -22,8 +22,25 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null)
 
+const STORAGE_KEY = 'mm_parfait_cart'
+
+const loadCart = (): CartItem[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as CartItem[]) : []
+  } catch {
+    return []
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  const [items, setItems] = useState<CartItem[]>(loadCart)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  }, [items])
 
   const addToCart = useCallback((product: Omit<CartItem, 'quantity'>) => {
     setItems((prev) => {
@@ -38,11 +55,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     toast.success(`${product.name} added to cart`)
   }, [])
 
-  const removeFromCart = useCallback((id: number) => {
+  const removeFromCart = useCallback((id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
-  const updateQuantity = useCallback((id: number, qty: number) => {
+  const updateQuantity = useCallback((id: string, qty: number) => {
     if (qty <= 0) {
       setItems((prev) => prev.filter((i) => i.id !== id))
       return

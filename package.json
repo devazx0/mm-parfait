@@ -2,8 +2,8 @@
   "name": "mm-parfait",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
+    "dev": "node api.js && turbo dev",
+    "build": "node api.js && turbo build",
     "lint": "turbo lint"
   },
   "packageManager": "pnpm@10.29.1",
@@ -11,8 +11,5 @@
     "@tailwindcss/vite": "^4.3.0",
     "tailwindcss": "^4.3.0",
     "turbo": "^2.5.0"
-  },
-  "dependencies": {
-    "react-router-dom": "^7.17.0"
   }
 }

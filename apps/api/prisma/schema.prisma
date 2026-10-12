@@ -1,0 +1,168 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Admin {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("admin")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  price       String
+  priceNum    Float?
+  badge       String?
+  img         String?
+  category    String   @default("parfait")
+  description String?
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum OrderStatus {
+  Pending
+  Processing
+  Shipped
+  Completed
+  Cancelled
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  customerName    String
+  customerEmail   String?
+  customerPhone   String?
+  deliveryAddress String?
+  deliveryMethod  String?
+  deliveryFee     Float       @default(0)
+  notes           String?
+  initials        String
+  date            String
+  total           String
+  totalAmount     Float
+  status          OrderStatus @default(Pending)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id       String @id @default(uuid())
+  orderId  String
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name     String
+  price    String
+  quantity Int
+}
+
+model FeaturedProduct {
+  id        String   @id @default(uuid())
+  productId String?
+  title     String
+  price     String
+  desc      String
+  badge     String?
+  img       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClassicProduct {
+  id        String   @id @default(uuid())
+  productId String?
+  title     String
+  price     String
+  desc      String
+  img       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  name      String
+  text      String
+  rating    Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StatHighlight {
+  id        String   @id @default(uuid())
+  label     String
+  value     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoreSettings {
+  id                String   @id @default("default")
+  storeOpen         Boolean  @default(true)
+  operatingHours    String   @default("08:00 AM - 09:00 PM")
+  deliveryZones     String   @default("Lagos Island, Lekki, Victoria Island, Ikeja")
+  pushNotifications Boolean  @default(true)
+  emailDigest       Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+}
+
+model StockAlert {
+  id        String   @id @default(uuid())
+  dot       String   @default("bg-error")
+  title     String
+  desc      String
+  action    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GalleryItem {
+  id        String   @id @default(uuid())
+  title     String
+  category  String
+  desc      String
+  img       String
+  aspect    String   @default("aspect-square")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CustomOrderRequest {
+  id        String   @id @default(uuid())
+  base      String
+  fruits    String[]
+  toppings  String[]
+  packaging String
+  quantity  Int
+  eventDate String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

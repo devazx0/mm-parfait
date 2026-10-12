@@ -1,11 +1,13 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { useCart } from '../context/CartContext'
+import { FREE_DELIVERY_THRESHOLD, DELIVERY_METHODS } from '../services/orders'
 
 export default function CartPage() {
   const navigate = useNavigate()
   const { items, updateQuantity, removeFromCart, totalItems, totalPrice } = useCart()
 
-  const deliveryFee = totalPrice >= 5000 ? 0 : 1500
+  const standard = DELIVERY_METHODS[0]
+  const deliveryFee = totalPrice >= FREE_DELIVERY_THRESHOLD ? 0 : standard.fee
   const grandTotal = totalPrice + deliveryFee
 
   return (
@@ -20,7 +22,7 @@ export default function CartPage() {
           <span className="material-symbols-outlined text-5xl text-on-surface-variant">shopping_cart</span>
           <p className="text-body-md font-body-md text-on-surface-variant">Your cart is empty.</p>
           <p className="text-label-sm font-label-sm text-on-surface-variant">Browse our shop to add items.</p>
-          <button onClick={() => navigate('/shop')} className="bg-primary text-on-primary font-bold py-3 px-lg rounded text-label-md font-label-md hover:opacity-90 transition-opacity">
+          <button onClick={() => navigate({ to: '/shop' })} className="bg-primary text-on-primary font-bold py-3 px-lg rounded text-label-md font-label-md hover:opacity-90 transition-opacity">
             Browse Shop
           </button>
         </div>
@@ -68,9 +70,9 @@ export default function CartPage() {
               <span>Delivery</span>
               <span>{deliveryFee === 0 ? 'Free' : `₦${deliveryFee.toLocaleString()}`}</span>
             </div>
-            {totalPrice < 5000 && totalPrice > 0 && (
+            {totalPrice < FREE_DELIVERY_THRESHOLD && totalPrice > 0 && (
               <p className="text-label-sm font-label-sm text-primary mb-xs">
-                Add ₦{(5000 - totalPrice).toLocaleString()} more for free delivery
+                Add ₦{(FREE_DELIVERY_THRESHOLD - totalPrice).toLocaleString()} more for free delivery
               </p>
             )}
             <div className="border-t border-outline-variant my-sm" />
@@ -81,7 +83,7 @@ export default function CartPage() {
           </section>
 
           <button
-            onClick={() => navigate('/checkout')}
+            onClick={() => navigate({ to: '/checkout' })}
             className="w-full bg-primary text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity"
           >
             Proceed to Checkout
