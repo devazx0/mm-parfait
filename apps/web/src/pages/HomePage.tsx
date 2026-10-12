@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { useCart } from '../context/CartContext'
+import { useHomepageContentQuery } from '../services/homepage/hook'
+import { useSettingsQuery } from '../services/settings/hook'
 
-const featured = [
+const fallbackFeatured = [
   {
+    id: 'f-0',
     title: 'Berry Blast Parfait',
     price: '₦4,500',
     desc: 'A vibrant mix of seasonal berries, honey-roasted granola, and our signature creamy yogurt.',
@@ -11,6 +14,7 @@ const featured = [
     img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA0iBaK8k1WlVz2mpCuat3jaMi0NXyT1gyZT2YUI55_CsU-atLPy2KM_FhqLdMB_gSO2U2Thifz9Kec55RRLeMLFXnAUn4KmxonenDlpAaNPROWB0r2baxYajK7C28wRVAmft0IBZeomMRiIYC5cP13FqJ8zRuGwAfd2rQ9jlTKycF6tAMNUgFyvVjrMdHAQX5P13y3sxCfPxPLGi_RxSffO8rPlFtfTKUHCKhcZfGeK7rsce_W1qHOroDgK4snEMHfFoLWmXUuJoO4',
   },
   {
+    id: 'f-1',
     title: 'Creamy Fura',
     price: '₦3,800',
     desc: 'Traditional millet fura blended perfectly with our rich, unsweetened yogurt for a wholesome treat.',
@@ -18,6 +22,7 @@ const featured = [
     img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDW56H3EsY4e9MBm3HCcXXUKN2UNPcaCFYAv7Gty0yEdNrnKlVXuYt6HuM2Ud2Rsj-tptOGK-Rd_wJeqk5hhOswR_IHkrqpEpe3JYhtSE_HnUlvo5tNu-giMTkrV3sF3WanJDYKPMZ5R0yhGdH36y8gdVJQP2P8IrHXn1jxU4_Mai9xd5jWOe_uDsRZgXv23yBEf4iVp_ue9iaRFsFRxyo2hUxX1JW_JFS7ERnFb7gGuyF88_mU1XazESXEMCIU_wDf9ut4EBJtCeT0',
   },
   {
+    id: 'f-2',
     title: 'Tropical Delight',
     price: '₦4,200',
     desc: 'Mango, pineapple, and a hint of coconut layered with our classic yogurt.',
@@ -26,14 +31,16 @@ const featured = [
   },
 ]
 
-const classics = [
+const fallbackClassics = [
   {
+    id: 'c-0',
     title: 'Small Parfait Cup',
     price: '₦1,500',
     desc: 'Perfect for a quick, healthy snack.',
     img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD7KUFuaiPd16yeTf0Ne1Wzt2pIOgt3ZocqjUHP1Z1foHx14mR9V6Bvng9ntjrhIsAF0a-BjbTByiVxmdu_q1LynXNNMwUMnM_TFkPmgL7S6hxvBiQrjfl8wSQY_P9rR8athMepJ7sr1DzRjQKmzpZ7gjyuhFY3WdDhqXwjq5IwweQTA51w41pni51sfKou5jqv1xtkE-gXxlDtjaLFE7OXyFgcBmc1vEobiO8BJzbOVsMBgBortULJh3byNGmcVvKxIhUCkiZ_4dR6',
   },
   {
+    id: 'c-1',
     title: 'Large Parfait Cup',
     price: '₦3,000',
     desc: 'A generous portion for a satisfying meal.',
@@ -56,7 +63,7 @@ const galleryPreviews = [
   },
 ]
 
-const testimonials = [
+const fallbackTestimonials = [
   {
     name: 'Chioma A.',
     text: 'The Berry Blast is my go-to breakfast. Fresh, filling, and absolutely delicious!',
@@ -74,8 +81,14 @@ const testimonials = [
   },
 ]
 
+const fallbackStats = [
+  { label: 'Years Serving', value: '5+' },
+  { label: 'Cups Made', value: '50K+' },
+  { label: 'Events Catered', value: '200+' },
+]
+
 const steps = [
-  { icon: 'restaurant_menu', title: 'Choose Your Base', desc: 'Pick from classic yogurt, creamy fura, or plant-based options.' },
+  { icon: 'restaurant_menu', title: 'Choose Your Base', desc: 'Pick from classic yogurt, creamy or fura.' },
   { icon: 'eco', title: 'Add Your Toppings', desc: 'Fresh fruits, crunchy granola, honey drizzle, and more.' },
   { icon: 'celebration', title: 'Enjoy & Share', desc: 'Perfect for a quick bite or a gathering with friends.' },
 ]
@@ -85,12 +98,52 @@ const priceNum = (price: string) => Number(price.replace(/[^0-9]/g, ''))
 export default function HomePage() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
+  const { data: homepageData } = useHomepageContentQuery()
+  const { data: settings } = useSettingsQuery()
+
   const [classicQtys, setClassicQtys] = useState<Record<number, number>>({})
   const getClassicQty = (i: number) => classicQtys[i] ?? 1
   const setClassicQty = (i: number, v: number) => setClassicQtys((q) => ({ ...q, [i]: Math.max(1, v) }))
 
+  const featured = homepageData?.featured
+    ? homepageData.featured.map((item, i) => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        desc: item.desc,
+        badge: item.badge,
+        img: item.img || fallbackFeatured[i % fallbackFeatured.length].img,
+      }))
+    : fallbackFeatured
+
+  const classics = homepageData?.classics
+    ? homepageData.classics.map((item, i) => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        desc: item.desc,
+        img: item.img || fallbackClassics[i % fallbackClassics.length].img,
+      }))
+    : fallbackClassics
+
+  const testimonials = homepageData?.testimonials
+    ? homepageData.testimonials
+    : fallbackTestimonials
+
+  const stats = homepageData?.stats
+    ? homepageData.stats
+    : fallbackStats
+
   return (
     <main className="pt-16 pb-[calc(64px+env(safe-area-inset-bottom,16px))]">
+      {/* Store Closed Banner Notice if set in Admin Control Center */}
+      {settings && !settings.storeOpen && (
+        <div className="bg-error-container text-on-surface border-b border-error p-3.5 px-container-margin-mobile text-center font-bold flex items-center justify-center gap-2 text-sm shadow-sm">
+          <span className="material-symbols-outlined text-error text-[20px]">storefront</span>
+          <span>Store is currently closed for online orders ({settings.operatingHours})</span>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative w-full h-[65vh] min-h-[500px] flex flex-col justify-end overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -103,8 +156,13 @@ export default function HomePage() {
         </div>
         <div className="relative z-10 px-container-margin-mobile pb-xl flex flex-col gap-md">
           <div className="flex flex-col gap-xs">
-            <span className="text-label-md font-label-md uppercase tracking-widest text-primary font-bold">
+            <span className="text-label-md font-label-md uppercase tracking-widest text-primary font-bold flex items-center gap-2">
               Premium Freshness
+              {settings?.operatingHours && (
+                <span className="bg-surface/80 backdrop-blur-xs text-on-surface text-[10px] px-2 py-0.5 rounded-full font-medium tracking-normal border border-surface-variant">
+                  {settings.operatingHours}
+                </span>
+              )}
             </span>
             <h2 className="text-headline-xl font-headline-xl text-on-surface leading-tight">
               Healthy meets<br />Delicious
@@ -115,14 +173,14 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col gap-sm mt-sm">
             <button
-              onClick={() => navigate('/shop')}
+              onClick={() => navigate({ to: '/shop' })}
               className="w-full bg-primary-container text-on-primary font-label-md text-label-md font-bold py-4 px-6 rounded-lg shadow-[0px_8px_30px_rgba(26,26,26,0.12)] active:scale-95 transition-transform duration-200 flex items-center justify-center gap-2"
             >
               Shop Our Parfaits
               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
             <button
-              onClick={() => navigate('/gallery')}
+              onClick={() => navigate({ to: '/gallery' })}
               className="w-full bg-transparent text-on-surface font-label-md text-label-md font-bold py-4 px-6 rounded-lg border border-on-surface/20 hover:bg-surface-container active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
             >
               Book Event Catering
@@ -156,23 +214,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Favourites */}
+      {/* Featured Favourites (Admin Configured) */}
       <section className="py-xl px-container-margin-mobile flex flex-col gap-md">
         <div className="flex justify-between items-end">
           <h3 className="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">
             Featured Favourites
           </h3>
           <button
-            onClick={() => navigate('/shop')}
+            onClick={() => navigate({ to: '/shop' })}
             className="text-label-md font-label-md text-primary font-bold hover:underline"
           >
             View All
           </button>
         </div>
         <div className="flex overflow-x-auto hide-scrollbar gap-gutter pb-4 -mx-container-margin-mobile px-container-margin-mobile snap-x snap-mandatory">
-          {featured.map((item) => (
+          {featured.map((item, idx) => (
             <div
-              key={item.title}
+              key={item.title + idx}
               className="min-w-[280px] w-[80vw] max-w-[320px] bg-surface rounded-xl border border-outline-variant/30 shadow-[0px_4px_20px_rgba(26,26,26,0.06)] overflow-hidden snap-center flex flex-col group cursor-pointer"
             >
               <div className="h-48 w-full relative overflow-hidden bg-surface-container-low">
@@ -199,7 +257,7 @@ export default function HomePage() {
                     {item.price}
                   </span>
                   <button
-                    onClick={() => addToCart({ id: 100 + featured.indexOf(item), name: item.title, price: item.price, priceNum: priceNum(item.price), img: item.img })}
+                    onClick={() => addToCart({ id: item.id, name: item.title, price: item.price, priceNum: priceNum(item.price), img: item.img })}
                     className="bg-surface-container text-on-surface p-2 rounded-full hover:bg-primary hover:text-on-primary transition-colors flex items-center justify-center"
                   >
                     <span className="material-symbols-outlined text-[20px]">add</span>
@@ -211,29 +269,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Strip */}
+      {/* Stats Strip (Admin Configured) */}
       <section className="mx-container-margin-mobile bg-surface-container-low rounded-2xl py-lg px-md grid grid-cols-3 gap-md text-center">
-        <div className="flex flex-col items-center gap-xs">
-          <span className="text-headline-md font-headline-md text-primary">5+</span>
-          <span className="text-label-sm font-label-sm text-on-surface-variant">Years Serving</span>
-        </div>
-        <div className="flex flex-col items-center gap-xs">
-          <span className="text-headline-md font-headline-md text-primary">50K+</span>
-          <span className="text-label-sm font-label-sm text-on-surface-variant">Cups Made</span>
-        </div>
-        <div className="flex flex-col items-center gap-xs">
-          <span className="text-headline-md font-headline-md text-primary">200+</span>
-          <span className="text-label-sm font-label-sm text-on-surface-variant">Events Catered</span>
-        </div>
+        {stats.map((st, idx) => (
+          <div key={st.label + idx} className="flex flex-col items-center gap-xs">
+            <span className="text-headline-md font-headline-md text-primary font-bold">{st.value}</span>
+            <span className="text-label-sm font-label-sm text-on-surface-variant">{st.label}</span>
+          </div>
+        ))}
       </section>
 
-      {/* Shop Classics */}
+      {/* Shop Classics (Admin Configured) */}
       <section className="py-xl px-container-margin-mobile">
         <h3 className="text-headline-lg-mobile font-headline-lg-mobile text-on-surface mb-md">Shop Classics</h3>
         <div className="grid grid-cols-1 gap-md">
           {classics.map((item, idx) => (
             <div
-              key={item.title}
+              key={item.title + idx}
               className="bg-surface border border-outline-variant rounded-lg shadow-[0px_4px_20px_rgba(26,26,26,0.06)] overflow-hidden flex flex-col"
             >
               <div className="h-44 bg-surface-container-high w-full relative">
@@ -251,7 +303,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => addToCart({ id: 200 + idx, name: item.title, price: item.price, priceNum: priceNum(item.price), img: item.img })}
+                  onClick={() => addToCart({ id: item.id, name: item.title, price: item.price, priceNum: priceNum(item.price), img: item.img })}
                   className="w-full bg-primary-container text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity"
                 >
                   Add to Cart
@@ -275,7 +327,7 @@ export default function HomePage() {
               <h3 className="text-headline-md font-headline-md text-on-primary font-bold mb-xs">Event Catering</h3>
               <p className="text-body-md font-body-md text-on-primary mb-md">Standard Event Parfait (₦2,000/cup)</p>
               <button
-                onClick={() => navigate('/gallery')}
+                onClick={() => navigate({ to: '/gallery' })}
                 className="w-full bg-primary-container text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity"
               >
                 Inquire Now
@@ -292,7 +344,7 @@ export default function HomePage() {
         <p className="text-body-md font-body-md text-on-surface-variant mb-lg">
           Mix and match flavors, fruits, and toppings exactly how you like it.
         </p>
-        <button onClick={() => navigate('/custom-order')} className="w-full bg-surface text-on-surface border-2 border-on-tertiary-fixed font-bold py-3 rounded text-label-md font-label-md hover:bg-surface-container transition-colors">
+        <button onClick={() => navigate({ to: '/custom-order' })} className="w-full bg-surface text-on-surface border-2 border-on-tertiary-fixed font-bold py-3 rounded text-label-md font-label-md hover:bg-surface-container transition-colors">
           Start Custom Order
         </button>
       </section>
@@ -321,7 +373,7 @@ export default function HomePage() {
         <div className="flex justify-between items-end">
           <h3 className="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">From Our Gallery</h3>
           <button
-            onClick={() => navigate('/gallery')}
+            onClick={() => navigate({ to: '/gallery' })}
             className="text-label-md font-label-md text-primary font-bold hover:underline"
           >
             View All
@@ -331,7 +383,7 @@ export default function HomePage() {
           {galleryPreviews.map((item) => (
             <div
               key={item.label}
-              onClick={() => navigate('/gallery')}
+              onClick={() => navigate({ to: '/gallery' })}
               className="relative rounded-xl overflow-hidden aspect-square bg-surface-container-high cursor-pointer group"
             >
               <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.label} src={item.img} />
@@ -343,13 +395,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials (Admin Configured) */}
       <section className="py-xl px-container-margin-mobile flex flex-col gap-md">
         <h3 className="text-headline-lg-mobile font-headline-lg-mobile text-on-surface text-center">What Our Customers Say</h3>
         <div className="flex overflow-x-auto hide-scrollbar gap-gutter pb-4 -mx-container-margin-mobile px-container-margin-mobile snap-x snap-mandatory">
-          {testimonials.map((t) => (
+          {testimonials.map((t, idx) => (
             <div
-              key={t.name}
+              key={t.name + idx}
               className="min-w-[280px] w-[75vw] max-w-[320px] bg-surface-container-low rounded-xl p-md shadow-[0px_4px_20px_rgba(26,26,26,0.06)] snap-center flex flex-col gap-sm"
             >
               <div className="flex gap-0.5">
@@ -373,7 +425,7 @@ export default function HomePage() {
             Fresh, delicious parfaits made just for you. Order now and taste the difference.
           </p>
           <button
-            onClick={() => navigate('/shop')}
+            onClick={() => navigate({ to: '/shop' })}
             className="bg-surface text-primary font-label-md text-label-md font-bold py-3 px-xl rounded-full hover:opacity-90 transition-opacity shadow-md"
           >
             Start Your Order

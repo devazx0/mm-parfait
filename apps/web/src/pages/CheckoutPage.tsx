@@ -1,35 +1,52 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { useCart } from '../context/CartContext'
-
-const deliveryMethods = [
-  { id: 'standard', label: 'Standard Delivery', desc: '3-5 business days', fee: 1500, icon: 'local_shipping' },
-  { id: 'express', label: 'Express Delivery', desc: '1-2 business days', fee: 3500, icon: 'rocket_launch' },
-  { id: 'pickup', label: 'Pick Up', desc: 'Ready in 2 hours', fee: 0, icon: 'store' },
-]
+import { useCreateOrderMutation } from '../services/orders/hook'
+import { DELIVERY_METHODS, type DeliveryMethodId } from '../services/orders'
+import { getApiErrorMessage } from '../services/api'
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { items, totalPrice, clearCart } = useCart()
+  const createOrderMutation = useCreateOrderMutation()
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', note: '' })
-  const [deliveryMethod, setDeliveryMethod] = useState('standard')
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethodId>('standard')
   const [submitting, setSubmitting] = useState(false)
 
-  const method = deliveryMethods.find((m) => m.id === deliveryMethod)!
+  const method = DELIVERY_METHODS.find((m) => m.id === deliveryMethod) ?? DELIVERY_METHODS[0]
   const deliveryFee = method.fee
   const grandTotal = totalPrice + deliveryFee
 
-  const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }))
+  const update = (field: keyof typeof form, value: string) => setForm((f) => ({ ...f, [field]: value }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    const order = { name: form.name, total: grandTotal, method: method.label, items: items.length }
-    sessionStorage.setItem('orderSuccess', JSON.stringify(order))
-    clearCart()
-    navigate('/order-success')
+    try {
+      const order = await createOrderMutation.mutateAsync({
+        customerName: form.name,
+        customerEmail: form.email,
+        customerPhone: form.phone,
+        deliveryAddress: form.address,
+        deliveryMethod,
+        notes: form.note || undefined,
+        items: items.map((item) => ({
+          name: item.name,
+          price: item.price,
+          priceNum: item.priceNum,
+          quantity: item.quantity,
+        })),
+      })
+      sessionStorage.setItem('orderSuccess', JSON.stringify(order))
+      clearCart()
+      navigate({ to: '/order-success' })
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to place order. Please try again.'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -58,7 +75,7 @@ export default function CheckoutPage() {
                 <input
                   type={field.type}
                   required
-                  value={(form as any)[field.key]}
+                  value={form[field.key]}
                   onChange={(e) => update(field.key, e.target.value)}
                   placeholder={field.label}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-xl py-3 pl-10 pr-4 text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary transition-colors"
@@ -85,7 +102,7 @@ export default function CheckoutPage() {
             Delivery Method
           </h3>
           <div className="flex flex-col gap-sm">
-            {deliveryMethods.map((dm) => (
+            {DELIVERY_METHODS.map((dm) => (
               <label
                 key={dm.id}
                 className={`flex items-center gap-md bg-surface border rounded-lg p-md cursor-pointer transition-all duration-200 shadow-[0px_4px_20px_rgba(26,26,26,0.06)] ${
@@ -162,7 +179,7 @@ export default function CheckoutPage() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || createOrderMutation.isPending}
           className="w-full bg-primary text-on-primary font-bold py-3 rounded text-label-md font-label-md hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-sm"
         >
           {submitting ? (
